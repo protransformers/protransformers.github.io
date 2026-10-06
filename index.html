@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProTransformer — Robust attention, plug and play</title>
+<meta name="description" content="ProTransformer makes any pretrained Transformer robust to adversarial attacks with one line of code. No retraining. NeurIPS 2024.">
+<meta property="og:title" content="ProTransformer — Robust attention, plug and play">
+<meta property="og:description" content="Make any pretrained Transformer robust to adversarial attacks with one line of code. No retraining.">
+<meta property="og:image" content="https://protransformers.github.io/assets/protransformer.png">
+<meta name="theme-color" content="#0b0d14">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><span class="logo">🛡️</span> ProTransformer</a>
+    <nav class="links">
+      <a href="#how">How it works</a>
+      <a href="#demos">Demos</a>
+      <a href="#models">Models</a>
+      <a href="#quickstart">Get started</a>
+      <a href="#paper">Paper</a>
+    </nav>
+    <a class="btn btn-sm btn-ghost gh" href="https://github.com/chris-hzc/ProTransformer" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============================== HERO ============================== -->
+<section class="hero">
+  <div class="glow"></div>
+  <div class="wrap hero-inner">
+    <a class="pill" href="https://arxiv.org/abs/2410.23182" target="_blank" rel="noopener"><span class="pill-tag">NeurIPS 2024</span> Read the paper →</a>
+    <h1>Robust attention.<br><span class="grad">Plug and play.</span></h1>
+    <p class="lead">ProTransformer swaps the attention layer of any pretrained Transformer for a <b>robust estimator</b> that adversarial tokens can't hijack. No retraining or fine-tuning. Works on text, vision, graphs and LLMs.</p>
+
+    <div class="install" id="install">
+      <code><span class="prompt">$</span> pip install protransformers</code>
+      <button class="copy" data-copy="pip install protransformers" aria-label="Copy install command">Copy</button>
+    </div>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="#quickstart">Get started</a>
+      <a class="btn btn-ghost" href="#how">See how it works</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num">91.8% → 1.8%</div><div class="lbl">Jailbreak success rate on Vicuna (GCG, transfer)</div></div>
+      <div class="stat"><div class="num">+19.5%</div><div class="lbl">BERT accuracy under TextFooler</div></div>
+      <div class="stat"><div class="num">+46.3%</div><div class="lbl">ViT accuracy under PGD at 4/255</div></div>
+      <div class="stat"><div class="num">0</div><div class="lbl">Extra training steps</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== PROBLEM ============================== -->
+<section class="section" id="why">
+  <div class="wrap two">
+    <div>
+      <div class="eyebrow">The problem</div>
+      <h2>Attention is a weighted average, and averages break easily.</h2>
+      <p>Each attention output is a weighted mean of value tokens. In statistics terms it's a <b>weighted least-squares</b> estimator, and least squares has a breakdown point of zero: one bad token can drag the output anywhere.</p>
+      <p>Adversarial attacks exploit exactly this. A few swapped words, an invisible pixel pattern, a gibberish jailbreak suffix or a handful of fake graph edges each inject a token that pulls the representation off course, layer after layer.</p>
+    </div>
+    <div class="card eqcard">
+      <div class="eq-label">Vanilla attention = weighted least squares</div>
+      <div class="eq" data-tex="\mathbf{z}^\star=\sum_j a_j\mathbf{v}_j=\arg\min_{\mathbf{z}}\sum_j a_j\,\lVert\mathbf{v}_j-\mathbf{z}\rVert^2"></div>
+      <div class="eq-label">ProAttention = robust estimator</div>
+      <div class="eq" data-tex="\mathbf{z}^\star=\arg\min_{\mathbf{z}}\sum_j a_j\,\rho\big(\lVert\mathbf{v}_j-\mathbf{z}\rVert\big)"></div>
+      <div class="eq-label">Solved in K ≤ 3 Newton-IRLS steps</div>
+      <div class="eq-row">
+        <div class="eq" data-tex="w_j^{(k)}=\frac{\rho'(\lVert\mathbf{v}_j-\mathbf{z}^{(k)}\rVert)}{\lVert\mathbf{v}_j-\mathbf{z}^{(k)}\rVert}"></div>
+        <div class="eq" data-tex="\mathbf{z}^{(k+1)}=\frac{\sum_j a_j w_j^{(k)}\mathbf{v}_j}{\sum_j a_j w_j^{(k)}}"></div>
+      </div>
+      <p class="muted small">With ρ = ℓ₁, Huber or MCP, tokens far from the consensus get down-weighted automatically, so outliers stop steering the output.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== INTERACTIVE ============================== -->
+<section class="section alt" id="how">
+  <div class="wrap">
+    <div class="eyebrow">Interactive</div>
+    <h2>See it in action</h2>
+    <p class="sub">Each dot is a value token in 2D with equal attention weight. <b>Click the canvas to inject adversarial tokens</b> and drag any dot to move it. The <span class="k-l2">grey ✕</span> is vanilla attention, and the <span class="k-pro">coloured ◆</span> is ProAttention, with its IRLS path. Each dot's size shows the weight ProAttention gives it.</p>
+
+    <div class="playground">
+      <div class="canvas-wrap card">
+        <canvas id="irls" aria-label="Interactive attention demo"></canvas>
+        <div class="legend">
+          <span><i class="dot clean"></i>clean token</span>
+          <span><i class="dot adv"></i>adversarial token</span>
+          <span><i class="mark l2">✕</i>vanilla attention</span>
+          <span><i class="mark pro">◆</i>ProAttention</span>
+        </div>
+      </div>
+      <div class="controls card">
+        <label class="ctl-label">Robust penalty ρ</label>
+        <div class="seg" id="norm">
+          <button data-v="L1">ℓ₁</button>
+          <button data-v="Huber">Huber</button>
+          <button data-v="MCP" class="on">MCP</button>
+        </div>
+
+        <label class="ctl-label">IRLS steps <b>K</b> = <span id="kval">3</span></label>
+        <input type="range" id="K" min="0" max="10" value="3">
+
+        <label class="ctl-label" id="hp-label">γ (MCP) = <span id="gval">4.0</span></label>
+        <input type="range" id="gamma" min="1" max="10" step="0.5" value="4">
+
+        <div class="readout">
+          <div><span>Vanilla shift</span><b id="shift-l2">0.00</b></div>
+          <div><span>ProAttention shift</span><b id="shift-pro">0.00</b></div>
+          <div class="muted small">Distance from the clean-only output</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-sm btn-ghost" id="add-adv">+ Attack (3 tokens)</button>
+          <button class="btn btn-sm btn-ghost" id="reset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== DEMOS ============================== -->
+<section class="section" id="demos">
+  <div class="wrap">
+    <div class="eyebrow">One layer, every modality</div>
+    <h2>Robust across language, LLMs, vision and graphs</h2>
+    <p class="sub">The same ProAttention module drops into BERT, LLaMA, ViT and GAT, using the original pretrained weights.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="lang">📝 Language</button>
+      <button class="tab" data-tab="llm">🤖 LLMs</button>
+      <button class="tab" data-tab="vision">🖼️ Vision</button>
+      <button class="tab" data-tab="graph">🕸️ Graph</button>
+    </div>
+
+    <!-- Language -->
+    <div class="panel on" id="tab-lang">
+      <div class="card demo-text">
+        <div class="demo-head">
+          <div>
+            <div class="demo-title">TextFooler vs. BERT on AG News</div>
+            <div class="muted small" id="tx-caption"></div>
+          </div>
+          <div class="pager">
+            <button class="btn btn-sm btn-ghost" id="tx-prev" aria-label="Previous example">←</button>
+            <span id="tx-idx" class="mono small"></span>
+            <button class="btn btn-sm btn-ghost" id="tx-next" aria-label="Next example">→</button>
+          </div>
+        </div>
+        <div class="seg seg-sm" id="tx-view">
+          <button data-v="orig">Original</button>
+          <button data-v="adv" class="on">Adversarial</button>
+        </div>
+        <p class="sentence" id="tx-sentence"></p>
+        <div class="verdicts">
+          <div class="verdict" id="tx-bert"></div>
+          <div class="verdict" id="tx-pro"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="demo-title">Accuracy under attack, AG News (paper, Table 1)</div>
+        <div class="muted small">Adaptive attacks run directly against each model.</div>
+        <div class="chart" id="chart-text"></div>
+      </div>
+    </div>
+
+    <!-- LLMs -->
+    <div class="panel" id="tab-llm">
+      <div class="card">
+        <div class="demo-title">Jailbreak: GCG adversarial suffixes on Vicuna-7B</div>
+        <div class="chat">
+          <div class="msg user"><span class="who">User</span><span class="ph">‹harmful request from AdvBench›</span> <span class="suffix">‹optimized gibberish suffix›</span></div>
+          <div class="msg bot bad"><span class="who">Vicuna</span>Sure, here is … <span class="tag tag-bad">jailbroken</span></div>
+          <div class="msg bot good"><span class="who">Pro-Vicuna</span>I'm sorry, but I can't help with that. <span class="tag tag-good">refused</span></div>
+        </div>
+        <p class="muted small">Schematic of the GCG suffix-injection attack (Zou et al., 2023). The suffix is a nonsense token string optimized to flip the model into compliance. ProAttention treats those tokens as outliers. The numbers below are attack success rates from the paper (Table 21, Vicuna-7B, transfer GCG).</p>
+        <div class="chart" id="chart-jb"></div>
+      </div>
+      <div class="card">
+        <div class="demo-title">Prompt attack on T5 (SST-2, TextFooler on the prompt)</div>
+        <div class="muted small">Accuracy vs. number of perturbed prompt words (paper, Table 17).</div>
+        <div class="chart" id="chart-t5"></div>
+      </div>
+    </div>
+
+    <!-- Vision -->
+    <div class="panel" id="tab-vision">
+      <div class="card">
+        <div class="demo-title">PGD on CIFAR-10 vision transformers (paper, Table 3)</div>
+        <div class="muted small">Robust accuracy (%) vs. ℓ∞ budget. Drag the slider.</div>
+        <input type="range" id="vis-eps" min="0" max="3" value="2" class="wide">
+        <div class="eps-label mono" id="vis-eps-label"></div>
+        <div class="chart" id="chart-vision"></div>
+      </div>
+      <div class="card explain">
+        <div class="demo-title">Why it works for images</div>
+        <p>ViT splits an image into 16×16 patches and attends over them. A PGD perturbation pushes a few patch embeddings far away from the rest, and vanilla attention averages them in. ProAttention sees those patches as outliers relative to the other patches and down-weights them in every layer.</p>
+        <div class="mini-grid" id="patch-grid" aria-hidden="true"></div>
+        <p class="muted small">Toy view: the red patches are perturbed. Hover over the grid to watch ProAttention down-weight them; vanilla attention keeps every weight uniform.</p>
+      </div>
+    </div>
+
+    <!-- Graph -->
+    <div class="panel" id="tab-graph">
+      <div class="card">
+        <div class="demo-title">Adversarial edges vs. GAT</div>
+        <div class="muted small">Toy illustration: the target node <b>T</b> aggregates its neighbours. Add adversarial edges to nodes from another class and watch which class each model predicts. GAT flips after 3 fake edges. Pro-GAT holds until the attacker's edges outnumber the true ones, which is where any robust estimator has to give in.</div>
+        <svg id="graph-svg" viewBox="0 0 520 320" role="img" aria-label="Graph attack illustration"></svg>
+        <label class="ctl-label">Adversarial edges: <b id="g-k">0</b></label>
+        <input type="range" id="g-edges" min="0" max="9" value="0" class="wide">
+        <div class="verdicts">
+          <div class="verdict" id="g-gat"></div>
+          <div class="verdict" id="g-pro"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="demo-title">PGD topology attack on Cora-ML (paper, Table 4)</div>
+        <div class="muted small">Accuracy (%) vs. fraction of perturbed edges, 5 splits.</div>
+        <div class="chart" id="chart-graph"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== MODELS ============================== -->
+<section class="section alt" id="models">
+  <div class="wrap">
+    <div class="eyebrow">Model zoo</div>
+    <h2>Drop-in replacements for 🤗 Transformers</h2>
+    <p class="sub">Load the original checkpoints, then switch ProAttention on with one call. With <code>norm="L2"</code> you get the vanilla model back, bit for bit.</p>
+    <div class="zoo">
+      <div class="model"><span class="dom">Text</span><b>Pro-BERT</b><code>BertForSequenceClassification</code></div>
+      <div class="model"><span class="dom">Text</span><b>Pro-RoBERTa</b><code>RobertaForSequenceClassification</code></div>
+      <div class="model"><span class="dom">Text</span><b>Pro-ALBERT</b><code>AlbertForSequenceClassification</code></div>
+      <div class="model"><span class="dom">Text</span><b>Pro-DistilBERT</b><code>DistilBertForSequenceClassification</code></div>
+      <div class="model"><span class="dom llm">LLM</span><b>Pro-LLaMA · Pro-Vicuna</b><code>LlamaForCausalLM</code></div>
+      <div class="model"><span class="dom llm">LLM</span><b>Pro-T5</b><code>T5ForConditionalGeneration</code></div>
+      <div class="model"><span class="dom vis">Vision</span><b>Pro-ViT</b><code>ViTForImageClassification</code></div>
+      <div class="model"><span class="dom gr">Graph</span><b>Pro-GAT</b><code>graph_attack.GAT</code></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== QUICKSTART ============================== -->
+<section class="section" id="quickstart">
+  <div class="wrap two">
+    <div>
+      <div class="eyebrow">Get started</div>
+      <h2>Three lines to a robust model</h2>
+      <ol class="steps">
+        <li><b>Install</b> from PyPI with <code>pip install protransformers</code>.</li>
+        <li><b>Load</b> any supported checkpoint from <code>protransformers</code> instead of <code>transformers</code>.</li>
+        <li><b>Switch on</b> ProAttention with <code>set_pro_attention</code>. That's all.</li>
+      </ol>
+      <div class="perf">
+        <div class="demo-title">Cost</div>
+        <p class="muted">BERT inference on AG News goes from <b>6.1 ms</b> to <b>11.7 ms</b> with K = 2. That's about 1–2× the backbone's time, and nothing extra at training time.</p>
+      </div>
+      <div class="cta left">
+        <a class="btn btn-primary" href="https://github.com/chris-hzc/ProTransformer#-quick-start" target="_blank" rel="noopener">Quick-start guide</a>
+        <a class="btn btn-ghost" href="https://pypi.org/project/protransformers/" target="_blank" rel="noopener">PyPI</a>
+      </div>
+    </div>
+    <div class="code card">
+      <div class="code-bar"><span></span><span></span><span></span><em>robust_bert.py</em><button class="copy" data-copy-target="code-snippet">Copy</button></div>
+<pre id="code-snippet"><code><span class="c-kw">from</span> protransformers <span class="c-kw">import</span> (
+    AutoModelForSequenceClassification, set_pro_attention
+)
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    <span class="c-str">"textattack/bert-base-uncased-ag-news"</span>
+)
+
+<span class="c-com"># Plug in ProAttention: no retraining, same weights</span>
+set_pro_attention(model, norm=<span class="c-str">"MCP"</span>, gamma=<span class="c-num">4.0</span>, L=<span class="c-num">3</span>)
+
+<span class="c-com"># LLMs: load with attn_implementation="eager"</span>
+<span class="c-com"># Vanilla again: set_pro_attention(model, norm="L2")</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== PAPER ============================== -->
+<section class="section alt" id="paper">
+  <div class="wrap two">
+    <div>
+      <div class="eyebrow">Research</div>
+      <h2>ProTransformer: Robustify Transformers via Plug-and-Play Paradigm</h2>
+      <p class="authors"><a href="https://github.com/chris-hzc" target="_blank" rel="noopener">Zhichao Hou</a><sup>1</sup>, Weizhi Gao<sup>1</sup>, Yuchen Shen<sup>2</sup>, Feiyi Wang<sup>3</sup>, Xiaorui Liu<sup>1</sup></p>
+      <p class="muted small"><sup>1</sup>North Carolina State University · <sup>2</sup>Carnegie Mellon University · <sup>3</sup>Oak Ridge National Laboratory</p>
+      <p class="muted">Advances in Neural Information Processing Systems (NeurIPS) 2024</p>
+      <div class="cta left">
+        <a class="btn btn-primary" href="https://arxiv.org/abs/2410.23182" target="_blank" rel="noopener">arXiv</a>
+        <a class="btn btn-ghost" href="https://arxiv.org/pdf/2410.23182" target="_blank" rel="noopener">PDF</a>
+        <a class="btn btn-ghost" href="https://github.com/chris-hzc/ProTransformer" target="_blank" rel="noopener">Code</a>
+      </div>
+    </div>
+    <div class="code card">
+      <div class="code-bar"><span></span><span></span><span></span><em>citation.bib</em><button class="copy" data-copy-target="bibtex">Copy</button></div>
+<pre id="bibtex"><code>@inproceedings{hou2024protransformer,
+  title     = {ProTransformer: Robustify Transformers via
+               Plug-and-Play Paradigm},
+  author    = {Hou, Zhichao and Gao, Weizhi and Shen, Yuchen
+               and Wang, Feiyi and Liu, Xiaorui},
+  booktitle = {Advances in Neural Information
+               Processing Systems},
+  volume    = {37},
+  pages     = {137557--137609},
+  year      = {2024}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap foot-inner">
+    <div><span class="logo">🛡️</span> <b>ProTransformer</b> <span class="muted">· Apache-2.0</span></div>
+    <div class="foot-links">
+      <a href="https://github.com/chris-hzc/ProTransformer" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://pypi.org/project/protransformers/" target="_blank" rel="noopener">PyPI</a>
+      <a href="https://arxiv.org/abs/2410.23182" target="_blank" rel="noopener">Paper</a>
+      <a href="mailto:zhou4@ncsu.edu">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="assets/main.js"></script>
+</body>
+</html>
